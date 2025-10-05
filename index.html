@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Охота на призраков</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-container {
+            position: relative;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1000px;
+            max-height: 700px;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #1a1a1a;
+            width: 100%;
+            height: 100%;
+            border: 3px solid #ff6b93;
+            border-radius: 10px;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .score {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .timer {
+            font-size: 1em;
+            color: #ff6b93;
+            margin-bottom: 5px;
+        }
+
+        .ghost-counter {
+            font-size: 0.9em;
+        }
+
+        .gray-text { color: #888; }
+        .pink-text { color: #ff6b93; }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #ff6b93;
+            display: none;
+            z-index: 100;
+        }
+
+        .pause-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #00ff88;
+            display: none;
+            z-index: 100;
+        }
+
+        .pause-screen h2 {
+            font-size: 2.5em;
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            color: #ff6b93;
+            margin-bottom: 15px;
+        }
+
+        .final-score {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn, .resume-btn {
+            background: linear-gradient(135deg, #ff6b93 0%, #ff8ea1 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .restart-btn:hover, .resume-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            max-width: 250px;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            border: 3px solid #ff6b93;
+            z-index: 100;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #ff6b93 0%, #ff8ea1 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .warning {
+            color: #ff6b93;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .joystick-area {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .joystick {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 107, 147, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            transition: transform 0.1s;
+        }
+
+        .dash-btn, .pause-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            color: #00ff88;
+            font-size: 0.7em;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .pause-btn {
+            border-color: #ffa502;
+            color: #ffa502;
+        }
+
+        .dash-btn.cooldown {
+            border-color: #666;
+            color: #666;
+        }
+
+        .music-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+
+        .music-btn, .pause-control-btn {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 2px solid #ff6b93;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .pause-control-btn {
+            border-color: #ffa502;
+        }
+
+        .ability-info {
+            margin-top: 8px;
+            font-size: 0.8em;
+            color: #00ff88;
+        }
+
+        .pause-indicator {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 165, 2, 0.9);
+            color: black;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: none;
+            z-index: 20;
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                width: 95vw;
+                height: 95vh;
+            }
+            
+            .mobile-controls {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="pause-indicator" id="pauseIndicator">⏸️ ПАУЗА</div>
+        
+        <div class="ui-overlay">
+            <div class="score">Очки: <span id="score">0</span></div>
+            <div class="timer">Время: <span id="timer">0</span>с</div>
+            <div class="ghost-counter">
+                <span class="gray-text">Серые: <span id="grayCount">0</span></span> | 
+                <span class="pink-text">Розовые: <span id="pinkCount">0</span></span>
+            </div>
+            <div class="warning" id="warning"></div>
+            <div class="ability-info" id="dashInfo">Рывок: Готов</div>
+        </div>
+
+        <div class="music-controls">
+            <button class="music-btn" onclick="toggleMusic()">🔇 Музыка</button>
+            <button class="pause-control-btn" onclick="togglePause()">⏸️ Пауза</button>
+        </div>
+
+        <div class="mobile-controls" id="mobileControls">
+            <div class="joystick-area" id="joystickArea">
+                <div class="joystick" id="joystick"></div>
+            </div>
+            <button class="dash-btn" id="dashBtn">РЫВОК</button>
+            <button class="pause-btn" id="mobilePauseBtn">⏸️</button>
+        </div>
+
+        <div class="instructions">
+            <p>🔼🔽◀️▶️ или WASD - Двигаться</p>
+            <p>SPACE - Рывок (3 сек)</p>
+            <p>P / ESC - Пауза</p>
+            <p>👻 Серые - съедай (+1 очко)</p>
+            <p>💖 Розовые - убегай!</p>
+        </div>
+
+        <div class="start-screen" id="startScreen">
+            <h2>🎮 Охота на призраков 👻</h2>
+            <p>Серые призраки = +1 очко 🎯</p>
+            <p>Розовые призраки = опасность! 💥</p>
+            <p>Новая способность: <span style="color: #00ff88;">Рывок!</span> 🚀</p>
+            <p style="color: #00ff88; font-size: 0.9em;">SPACE - неуязвимый рывок</p>
+            <p style="color: #ffa502; font-size: 0.9em;">P - пауза</p>
+            <button class="start-btn" onclick="startGame()">Начать игру</button>
+        </div>
+
+        <div class="pause-screen" id="pauseScreen">
+            <h2>⏸️ ПАУЗА</h2>
+            <div class="final-score">Очки: <span id="pauseScore">0</span></div>
+            <button class="resume-btn" onclick="togglePause()">Продолжить</button>
+            <button class="restart-btn" onclick="restartGame()">Заново</button>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Игра Окончена!</h2>
+            <div class="final-score">Очки: <span id="finalScore">0</span></div>
+            <button class="restart-btn" onclick="restartGame()">Играть снова</button>
+        </div>
+    </div>
+
+    <script>
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.scoreElement = document.getElementById('score');
+                this.timerElement = document.getElementById('timer');
+                this.grayCountElement = document.getElementById('grayCount');
+                this.pinkCountElement = document.getElementById('pinkCount');
+                this.gameOverElement = document.getElementById('gameOver');
+                this.finalScoreElement = document.getElementById('finalScore');
+                this.pauseScreenElement = document.getElementById('pauseScreen');
+                this.pauseScoreElement = document.getElementById('pauseScore');
+                this.pauseIndicator = document.getElementById('pauseIndicator');
+                this.startScreenElement = document.getElementById('startScreen');
+                this.warningElement = document.getElementById('warning');
+                this.dashInfoElement = document.getElementById('dashInfo');
+                this.mobileControls = document.getElementById('mobileControls');
+                this.joystick = document.getElementById('joystick');
+                this.joystickArea = document.getElementById('joystickArea');
+                this.dashBtn = document.getElementById('dashBtn');
+                this.mobilePauseBtn = document.getElementById('mobilePauseBtn');
+                
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                this.audioUnlocked = false;
+                this.isPaused = false;
+                
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                this.reset();
+                this.setupEventListeners();
+            }
+
+            resizeCanvas() {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
+            }
+
+            reset() {
+                this.score = 0;
+                this.gameTime = 0;
+                this.ghosts = [];
+                this.player = {
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height / 2,
+                    size: 15,
+                    speed: 5,
+                    alive: true,
+                    isDashing: false,
+                    dashDirection: { x: 0, y: 0 },
+                    dashTime: 0,
+                    dashCooldown: 0,
+                    dashTrail: []
+                };
+                this.keys = {};
+                this.gameActive = false;
+                this.ghostsPerSecond = 1;
+                this.lastSpawnTime = 0;
+                this.touch = { x: 0, y: 0, active: false };
+                this.isChasing = false;
+                this.deathParticles = [];
+            }
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                        this.togglePause();
+                        return;
+                    }
+                    
+                    this.keys[e.key] = true;
+                    if (e.key === ' ' && !this.player.isDashing && this.player.dashCooldown <= 0 && !this.isPaused) {
+                        this.activateDash();
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+
+                if (this.isMobile) {
+                    this.setupTouchControls();
+                }
+            }
+
+            setupTouchControls() {
+                let joystickActive = false;
+                const joystickRect = this.joystickArea.getBoundingClientRect();
+                const joystickCenterX = joystickRect.left + joystickRect.width / 2;
+                const joystickCenterY = joystickRect.top + joystickRect.height / 2;
+                const maxDistance = joystickRect.width / 2 - 25;
+
+                this.joystickArea.addEventListener('touchstart', (e) => {
+                    if (this.isPaused) return;
+                    e.preventDefault();
+                    joystickActive = true;
+                    this.updateJoystick(e.touches[0]);
+                });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (joystickActive && !this.isPaused) {
+                        e.preventDefault();
+                        this.updateJoystick(e.touches[0]);
+                    }
+                });
+
+                document.addEventListener('touchend', (e) => {
+                    joystickActive = false;
+                    this.joystick.style.transform = 'translate(0px, 0px)';
+                    this.touch.active = false;
+                });
+
+                this.dashBtn.addEventListener('touchstart', (e) => {
+                    if (this.isPaused) return;
+                    e.preventDefault();
+                    if (!this.player.isDashing && this.player.dashCooldown <= 0) {
+                        this.activateDash();
+                    }
+                });
+
+                this.mobilePauseBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.togglePause();
+                });
+
+                this.updateJoystick = (touch) => {
+                    const touchX = touch.clientX;
+                    const touchY = touch.clientY;
+                    
+                    const deltaX = touchX - joystickCenterX;
+                    const deltaY = touchY - joystickCenterY;
+                    
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const angle = Math.atan2(deltaY, deltaX);
+                    
+                    if (distance > maxDistance) {
+                        this.touch.x = Math.cos(angle) * maxDistance;
+                        this.touch.y = Math.sin(angle) * maxDistance;
+                    } else {
+                        this.touch.x = deltaX;
+                        this.touch.y = deltaY;
+                    }
+                    
+                    this.joystick.style.transform = `translate(${this.touch.x}px, ${this.touch.y}px)`;
+                    this.touch.active = true;
+                };
+            }
+
+            togglePause() {
+                if (!this.gameActive || !this.player.alive) return;
+                
+                this.isPaused = !this.isPaused;
+                
+                if (this.isPaused) {
+                    this.pauseScreenElement.style.display = 'block';
+                    this.pauseIndicator.style.display = 'block';
+                    this.pauseScoreElement.textContent = this.score;
+                } else {
+                    this.pauseScreenElement.style.display = 'none';
+                    this.pauseIndicator.style.display = 'none';
+                    // Продолжаем игровой цикл
+                    if (this.gameActive && this.player.alive) {
+                        this.update();
+                    }
+                }
+            }
+
+            activateDash() {
+                if (!this.player.alive || this.isPaused) return;
+                
+                let moveX = 0, moveY = 0;
+
+                if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) moveY -= 1;
+                if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) moveY += 1;
+                if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) moveX -= 1;
+                if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) moveX += 1;
+
+                if (moveX === 0 && moveY === 0 && this.touch.active) {
+                    const length = Math.sqrt(this.touch.x * this.touch.x + this.touch.y * this.touch.y);
+                    if (length > 0) {
+                        moveX = this.touch.x / length;
+                        moveY = this.touch.y / length;
+                    }
+                }
+
+                if (moveX === 0 && moveY === 0) {
+                    moveX = (Math.random() - 0.5) * 2;
+                    moveY = (Math.random() - 0.5) * 2;
+                }
+
+                const length = Math.sqrt(moveX * moveX + moveY * moveY);
+                this.player.dashDirection.x = moveX / length;
+                this.player.dashDirection.y = moveY / length;
+                
+                this.player.isDashing = true;
+                this.player.dashTime = 0.3;
+                this.player.dashCooldown = 3.0;
+                this.updateDashUI();
+            }
+
+            updateDash() {
+                if (this.player.isDashing) {
+                    this.player.dashTime -= 1/60;
+                    
+                    const dashSpeed = 15;
+                    this.player.x += this.player.dashDirection.x * dashSpeed;
+                    this.player.y += this.player.dashDirection.y * dashSpeed;
+                    
+                    this.player.dashTrail.push({
+                        x: this.player.x,
+                        y: this.player.y,
+                        size: this.player.size,
+                        life: 0.5,
+                        maxLife: 0.5
+                    });
+                    
+                    if (this.player.dashTrail.length > 10) {
+                        this.player.dashTrail.shift();
+                    }
+                    
+                    this.player.x = Math.max(this.player.size, Math.min(this.canvas.width - this.player.size, this.player.x));
+                    this.player.y = Math.max(this.player.size, Math.min(this.canvas.height - this.player.size, this.player.y));
+                    
+                    if (this.player.dashTime <= 0) {
+                        this.player.isDashing = false;
+                    }
+                }
+                
+                if (this.player.dashCooldown > 0) {
+                    this.player.dashCooldown -= 1/60;
+                    this.updateDashUI();
+                }
+                
+                for (let i = this.player.dashTrail.length - 1; i >= 0; i--) {
+                    this.player.dashTrail[i].life -= 1/60;
+                    if (this.player.dashTrail[i].life <= 0) {
+                        this.player.dashTrail.splice(i, 1);
+                    }
+                }
+            }
+
+            updateDashUI() {
+                if (this.player.dashCooldown <= 0) {
+                    this.dashInfoElement.textContent = "Рывок: Готов";
+                    this.dashInfoElement.style.color = "#00ff88";
+                    if (this.isMobile) {
+                        this.dashBtn.classList.remove('cooldown');
+                    }
+                } else {
+                    const seconds = Math.ceil(this.player.dashCooldown);
+                    this.dashInfoElement.textContent = `Рывок: ${seconds}сек`;
+                    this.dashInfoElement.style.color = "#ff6b93";
+                    if (this.isMobile) {
+                        this.dashBtn.classList.add('cooldown');
+                    }
+                }
+            }
+
+            createDeathParticles(x, y) {
+                const particles = [];
+                const particleCount = 20;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    const speed = 2 + Math.random() * 4;
+                    const size = 2 + Math.random() * 4;
+                    const life = 0.8 + Math.random() * 0.4;
+                    
+                    particles.push({
+                        x: x,
+                        y: y,
+                        velocityX: Math.cos(angle) * speed,
+                        velocityY: Math.sin(angle) * speed,
+                        size: size,
+                        life: life,
+                        maxLife: life,
+                        color: this.getRandomParticleColor()
+                    });
+                }
+                
+                return particles;
+            }
+
+            getRandomParticleColor() {
+                const colors = ['#ffffff', '#ff6b93', '#ff8ea1', '#ff4757'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            updateDeathParticles() {
+                for (let i = this.deathParticles.length - 1; i >= 0; i--) {
+                    const particle = this.deathParticles[i];
+                    
+                    particle.x += particle.velocityX;
+                    particle.y += particle.velocityY;
+                    particle.velocityY += 0.1;
+                    particle.life -= 1/60;
+                    
+                    particle.velocityX *= 0.98;
+                    particle.velocityY *= 0.98;
+                    
+                    if (particle.life <= 0) {
+                        this.deathParticles.splice(i, 1);
+                    }
+                }
+            }
+
+            drawDeathParticles() {
+                this.deathParticles.forEach(particle => {
+                    const alpha = particle.life / particle.maxLife;
+                    this.ctx.save();
+                    this.ctx.globalAlpha = alpha;
+                    this.ctx.fillStyle = particle.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+            }
+
+            updatePlayer() {
+                if (!this.player.alive || this.player.isDashing || this.isPaused) return;
+
+                let moveX = 0, moveY = 0;
+
+                if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) moveY -= 1;
+                if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) moveY += 1;
+                if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) moveX -= 1;
+                if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) moveX += 1;
+
+                if (this.touch.active && !this.isPaused) {
+                    const sensitivity = 0.05;
+                    moveX += this.touch.x * sensitivity;
+                    moveY += this.touch.y * sensitivity;
+                }
+
+                if (moveX !== 0 || moveY !== 0) {
+                    const length = Math.sqrt(moveX * moveX + moveY * moveY);
+                    moveX /= length;
+                    moveY /= length;
+                    
+                    this.player.x += moveX * this.player.speed;
+                    this.player.y += moveY * this.player.speed;
+                }
+
+                this.player.x = Math.max(this.player.size, Math.min(this.canvas.width - this.player.size, this.player.x));
+                this.player.y = Math.max(this.player.size, Math.min(this.canvas.height - this.player.size, this.player.y));
+            }
+
+            spawnGhost() {
+                const side = Math.floor(Math.random() * 4);
+                let x, y, velocityX, velocityY;
+                
+                const isPink = Math.random() < 0.5;
+                const size = 12 + Math.random() * 8;
+                
+                switch(side) {
+                    case 0: // сверху
+                        x = Math.random() * this.canvas.width;
+                        y = -30;
+                        velocityX = (Math.random() - 0.5) * 3;
+                        velocityY = Math.random() * 2 + 1;
+                        break;
+                    case 1: // справа
+                        x = this.canvas.width + 30;
+                        y = Math.random() * this.canvas.height;
+                        velocityX = -Math.random() * 2 - 1;
+                        velocityY = (Math.random() - 0.5) * 3;
+                        break;
+                    case 2: // снизу
+                        x = Math.random() * this.canvas.width;
+                        y = this.canvas.height + 30;
+                        velocityX = (Math.random() - 0.5) * 3;
+                        velocityY = -Math.random() * 2 - 1;
+                        break;
+                    case 3: // слева
+                        x = -30;
+                        y = Math.random() * this.canvas.height;
+                        velocityX = Math.random() * 2 + 1;
+                        velocityY = (Math.random() - 0.5) * 3;
+                        break;
+                }
+
+                this.ghosts.push({
+                    x, y,
+                    velocityX, velocityY,
+                    size,
+                    isPink,
+                    spawnTime: this.gameTime,
+                    isChasing: false
+                });
+            }
+
+            updateGhosts() {
+                let grayCount = 0;
+                let pinkCount = 0;
+                let activePinkGhosts = 0;
+
+                for (let i = this.ghosts.length - 1; i >= 0; i--) {
+                    const ghost = this.ghosts[i];
+                    
+                    if (ghost.isPink) {
+                        const timeSinceSpawn = this.gameTime - ghost.spawnTime;
+                        
+                        if (timeSinceSpawn > 1 && timeSinceSpawn <= 6) {
+                            ghost.isChasing = true;
+                            const dx = this.player.x - ghost.x;
+                            const dy = this.player.y - ghost.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance > 0) {
+                                ghost.velocityX = (dx / distance) * 3;
+                                ghost.velocityY = (dy / distance) * 3;
+                            }
+                            activePinkGhosts++;
+                        }
+                        
+                        if (timeSinceSpawn > 6) {
+                            ghost.velocityX *= 0.95;
+                            ghost.velocityY *= 0.95;
+                            
+                            if (timeSinceSpawn > 7) {
+                                this.ghosts.splice(i, 1);
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (!this.isPaused) {
+                        ghost.x += ghost.velocityX;
+                        ghost.y += ghost.velocityY;
+                    }
+
+                    const dx = ghost.x - this.player.x;
+                    const dy = ghost.y - this.player.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < ghost.size + this.player.size && this.player.alive && !this.isPaused) {
+                        if (!this.player.isDashing) {
+                            if (ghost.isPink && ghost.isChasing) {
+                                this.playerDeath(this.player.x, this.player.y);
+                                return;
+                            } else if (!ghost.isPink) {
+                                this.score++;
+                                this.ghosts.splice(i, 1);
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (!ghost.isChasing && (ghost.x < -100 || ghost.x > this.canvas.width + 100 ||
+                        ghost.y < -100 || ghost.y > this.canvas.height + 100)) {
+                        this.ghosts.splice(i, 1);
+                        continue;
+                    }
+
+                    if (ghost.isPink) pinkCount++;
+                    else grayCount++;
+                }
+
+                this.grayCountElement.textContent = grayCount;
+                this.pinkCountElement.textContent = pinkCount;
+                
+                if (activePinkGhosts > 0) {
+                    this.warningElement.textContent = `⚠️ ${activePinkGhosts} розовых преследуют!`;
+                } else {
+                    this.warningElement.textContent = '';
+                }
+            }
+
+            playerDeath(x, y) {
+                this.player.alive = false;
+                this.deathParticles = this.createDeathParticles(x, y);
+                
+                setTimeout(() => {
+                    this.gameOver();
+                }, 1000);
+            }
+
+            drawDashTrail() {
+                this.player.dashTrail.forEach((trail) => {
+                    const alpha = trail.life / trail.maxLife;
+                    const size = trail.size * (0.5 + alpha * 0.5);
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = alpha * 0.6;
+                    this.ctx.fillStyle = '#000000';
+                    this.ctx.beginPath();
+                    this.ctx.arc(trail.x, trail.y, size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+            }
+
+            draw() {
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                if (this.player.dashTrail.length > 0) {
+                    this.drawDashTrail();
+                }
+
+                if (this.deathParticles.length > 0) {
+                    this.drawDeathParticles();
+                }
+
+                if (this.player.alive) {
+                    if (this.player.isDashing) {
+                        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    } else {
+                        this.ctx.fillStyle = '#ffffff';
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.player.x, this.player.y, this.player.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+
+                this.ghosts.forEach(ghost => {
+                    if (ghost.isPink) {
+                        this.ctx.fillStyle = '#ff6b93';
+                    } else {
+                        this.ctx.fillStyle = '#888888';
+                    }
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(ghost.x, ghost.y, ghost.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.beginPath();
+                    this.ctx.arc(ghost.x - ghost.size * 0.3, ghost.y - ghost.size * 0.2, ghost.size * 0.2, 0, Math.PI * 2);
+                    this.ctx.arc(ghost.x + ghost.size * 0.3, ghost.y - ghost.size * 0.2, ghost.size * 0.2, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    this.ctx.fillStyle = 'black';
+                    this.ctx.beginPath();
+                    this.ctx.arc(ghost.x - ghost.size * 0.3, ghost.y - ghost.size * 0.2, ghost.size * 0.08, 0, Math.PI * 2);
+                    this.ctx.arc(ghost.x + ghost.size * 0.3, ghost.y - ghost.size * 0.2, ghost.size * 0.08, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+
+            gameOver() {
+                this.gameActive = false;
+                this.isPaused = false;
+                this.finalScoreElement.textContent = this.score;
+                this.gameOverElement.style.display = 'block';
+                this.pauseIndicator.style.display = 'none';
+            }
+
+            update() {
+                if (!this.gameActive || this.isPaused) return;
+
+                this.gameTime += 1/60;
+                this.timerElement.textContent = Math.floor(this.gameTime);
+
+                this.ghostsPerSecond = 1 + Math.floor(this.gameTime / 10);
+                
+                if (this.gameTime - this.lastSpawnTime > 1 / this.ghostsPerSecond) {
+                    this.spawnGhost();
+                    this.lastSpawnTime = this.gameTime;
+                }
+
+                this.updatePlayer();
+                this.updateDash();
+                this.updateGhosts();
+                this.updateDeathParticles();
+                this.draw();
+                this.scoreElement.textContent = this.score;
+
+                if (this.gameActive && !this.isPaused) {
+                    requestAnimationFrame(() => this.update());
+                }
+            }
+
+            start() {
+                this.gameActive = true;
+                this.isPaused = false;
+                this.startScreenElement.style.display = 'none';
+                this.pauseScreenElement.style.display = 'none';
+                this.pauseIndicator.style.display = 'none';
+                
+                if (this.isMobile) {
+                    this.mobileControls.style.display = 'flex';
+                }
+                
+                this.update();
+            }
+        }
+
+        let game = new Game();
+
+        function startGame() {
+            game.start();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('pauseScreen').style.display = 'none';
+            game = new Game();
+            game.start();
+        }
+
+        function togglePause() {
+            game.togglePause();
+        }
+
+        function toggleMusic() {
+            const musicBtn = document.querySelector('.music-btn');
+            if (musicBtn.textContent.includes('🔇')) {
+                musicBtn.textContent = '🔊 Музыка';
+            } else {
+                musicBtn.textContent = '🔇 Музыка';
+            }
+        }
+
+        window.addEventListener('load', function() {
+            console.log('Игра загружена!');
+        });
+    </script>
+</body>
+</html>
